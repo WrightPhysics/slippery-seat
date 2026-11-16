@@ -165,10 +165,14 @@ input[type=range]{width:100%;accent-color:var(--accent)}
   function toWorld(c,u,w){var a=axes(c);return {x:c.x+u*a.r.x+w*a.f.x,y:c.y+u*a.r.y+w*a.f.y};}
   function toCar(c,p){var a=axes(c),dx=p.x-c.x,dy=p.y-c.y;return {u:dx*a.r.x+dy*a.r.y,w:dx*a.f.x+dy*a.f.y};}
   function doris(t){return toWorld(car(V*t),-HS,0);}
-  function rexFree(t){return {x:XA+HS,y:YA+sA-V*t};}
+  function rexFree(t){return {x:XA+HS,y:YA+sA-V*t};}   // the straight line Rex keeps to
+  // Rex's spot in the car while he slides: only the sideways part of his motion relative to the car.
+  // (Relative to his seat he would also creep forward a little, because the inside of the turn moves slower
+  // than the car's middle; over a couple of feet that is imperceptible, so it is left out.)
+  function rexSlide(t){return {u:toCar(car(V*t),rexFree(t)).u,w:0};}
   function held(t){return belt||(tc!==null&&t>=tc);}
-  function rexCar(t){if(belt) return {u:HS,w:0}; if(held(t)) return L; return toCar(car(V*t),rexFree(t));}
-  function rex(t){return held(t)?toWorld(car(V*t),rexCar(t).u,rexCar(t).w):rexFree(t);}
+  function rexCar(t){if(belt) return {u:HS,w:0}; if(held(t)) return L; return rexSlide(t);}
+  function rex(t){var q=rexCar(t);return toWorld(car(V*t),q.u,q.w);}
   function pushing(t){return held(t)&&car(V*t).turning;}
   function rexVel(t){var e=1e-3,a=rex(t),b=rex(t+e);return {x:(b.x-a.x)/e,y:(b.y-a.y)/e};}
 
@@ -177,8 +181,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     tc=null;L=null;B=null;
     if(belt) return;
     for(var tt=sA/V,te=tEnd();tt<te;tt+=0.001){
-      var d=doris(tt),r=rexFree(tt);
-      if(Math.hypot(d.x-r.x,d.y-r.y)<=2*RB){tc=tt;L=toCar(car(V*tt),r);B=r;return;}
+      var q=rexSlide(tt);
+      if(q.u<=-HS+2*RB){tc=tt;L={u:-HS+2*RB,w:0};B=toWorld(car(V*tt),L.u,0);return;}   // touching Doris
     }
   }
   function reset(){running=false;t=0;setup();sync();draw();}
